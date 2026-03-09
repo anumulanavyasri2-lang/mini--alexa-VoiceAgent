@@ -1,38 +1,68 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-import asyncio
 import json
+import asyncio
+import time
 
-app = FastAPI(title="Real-Time Clinical Booking Agent", version="1.0.0")
+app = FastAPI(title="Real-Time Clinical Booking Agent (Local Test Mode)")
+
+# Mock Database & State (In a real app, these would come from the other modules)
+# We keep them here for the "Local Test Mode" convenience or import them correctly
+from scheduler.appointment_engine.scheduler import AppointmentScheduler
+from memory.session_memory.redis_client import MemoryManager
+from agent.reasoning.agent import ReasoningAgent
+
+scheduler = AppointmentScheduler()
+memory = MemoryManager()
+agent = ReasoningAgent()
+
+def get_3_alternatives(date_str):
+    return scheduler._get_3_alternatives(date_str)
 
 @app.websocket("/ws/stream")
 async def websocket_endpoint(websocket: WebSocket):
-    """
-    WebSocket endpoint handling real-time audio streams.
-    Latency budget: STT (120ms) + Reasoning (200ms) + TTS (100ms) = < 450ms.
-    """
     await websocket.accept()
-    session_id = websocket.headers.get("Sec-WebSocket-Key", "default-session")
+    print("\n[Server] Client connected.")
     
     try:
         while True:
-            # 1. Receiver audio from user iteratively
-            data = await websocket.receive_text() # Receiving JSON wrapper for audio payload or binary chunks
+            data = await websocket.receive_text()
             payload = json.loads(data)
             
-            # 2. Check for "Barge-in" logic (user interrupting the agent)
             if payload.get("type") == "audio_chunk":
-               if payload.get("detected_speech"):
-                   # Trigger "Barge-in" -> immediately halt ongoing TTS synthesis/broadcast in the pipeline
-                   print("Barge-in detected! Halting current TTS audio response immediately.")
-                   # Logic to flush the TTS queue goes here
+                if payload.get("detected_speech"):
+                    print("[Server] Barge-in Detected! Interrupting current playback.")
+                    await websocket.send_text(json.dumps({"type": "barge_in_ack"}))
+                continue
+
+            user_text = payload.get("text", "")
+            print(f"[Server] Received Text: {user_text}")
             
-            # STT -> LLM Reasoning -> TTS mock pipeline invocation
-            # In a real deployed setup, this integrates Whisper/Deepgram STT, OpenAI/Groq Tool Calling, and TTS concurrently
-            response_json = {
-               "type": "audio_response",
-               "audio_data": "base64_encoded_audio_bytes_mock"
-            }
-            await websocket.send_text(json.dumps(response_json))
+            stt_ms = 120
+            # Use the actual agent logic for reasoning
+            intent_data, reasoning_ms = agent.process_intent(user_text)
+            tts_ms = 100
             
+            reply = "I understood your request."
+            if intent_data.get("intent") == "bookAppointment":
+                 reply = scheduler.book_appointment(
+                     doctor_id=1, 
+                     date_str=intent_data.get("date", "2023-11-01"),
+                     requested_slot=intent_data.get("time", "10:00")
+                 )
+            elif intent_data.get("intent") == "checkAvailability":
+                 slots = scheduler.check_availability(1, intent_data.get("date", "2023-11-01"))
+                 reply = f"Available slots are: {', '.join(slots)}"
+
+            total_ms = stt_ms + reasoning_ms + tts_ms
+            print(f"--- Latency: STT {stt_ms}ms | Reasoning {reasoning_ms:.2f}ms | TTS {tts_ms}ms | Total {total_ms:.2f}ms ---")
+            
+            await websocket.send_text(json.dumps({
+                "type": "audio_response",
+                "text_reply": reply,
+                "latency_metrics": {"total_ms": total_ms}
+            }))
+
     except WebSocketDisconnect:
-        print(f"Client disconnected: {session_id}")
+        print("[Server] Client disconnected.")
+    except Exception as e:
+        print(f"[Server] Error: {e}")
