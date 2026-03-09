@@ -57,3 +57,52 @@ We store core domain data safely using PostgreSQL.
    ```bash
    uvicorn backend.api.main:app --reload --host 0.0.0.0 --port 8000
    ```
+# Mini Alexa: AI-Powered Voice Assistant 🎤
+
+## 📌 Project Overview
+This project is a functional **Mini Alexa** voice assistant developed as part of the **2Care.ai** technical assignment. It is designed to demonstrate core competencies in **Speech Recognition**, **Natural Language Processing (NLP)**, and **Text-to-Speech (TTS)** integration using Python.
+
+The assistant listens for user input via a microphone, processes the intent, and provides an automated voice response or executes a specific task.
+
+---
+
+## 🚀 Key Features
+* **Voice Command Recognition:** Converts real-time human speech into text using the `SpeechRecognition` library.
+* **Text-to-Speech (TTS) Engine:** Provides verbal feedback to the user via the `pyttsx3` or `gTTS` engine.
+* **Dynamic Task Execution:** * Tells the current time and date.
+    * Searches Wikipedia for instant information.
+    * Opens popular websites like YouTube, Google, and Stack Overflow.
+    * Plays music or YouTube videos directly from voice prompts.
+* **Error Handling:** Gracefully manages background noise and unrecognized commands to ensure a smooth user experience.
+
+---
+
+## 🛠️ Technical Stack
+* **Language:** Python 3.x
+* **Libraries:** * `SpeechRecognition` (Audio Processing)
+    * `pyttsx3` (Offline Text-to-Speech)
+    * `PyAudio` (Microphone interface)
+    * `Wikipedia` (Information retrieval)
+    * `Webbrowser` (System browser control)
+
+---
+
+## 📽️ Demo Video
+You can view the full screen recording of the project in action here:
+👉 [**Watch the Demo on Google Drive**](https://drive.google.com/file/d/1YugL84FqlW_y0Qz8guj0Qd3htii1ti4H/view?usp=drivesdk)
+
+---
+
+## ⚙️ Setup & Installation
+1.  **Clone the Repository:**
+    ```bash
+    git clone [INSERT_YOUR_GITHUB_LINK_HERE]
+    ```
+2.  **Install Dependencies:**
+    ```bash
+    pip install speechrecognition pyttsx3 pyaudio wikipedia
+    ```
+3.  **Run the Assistant:**
+    ```bash
+    python alexa_mini.py
+    ```
